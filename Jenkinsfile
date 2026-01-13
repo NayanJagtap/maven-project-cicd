@@ -5,9 +5,6 @@ pipeline {
             image 'maven:3.9.6-eclipse-temurin-17-alpine'
         }
     }
-    env {
-        sonar_url = "http://192.168.83.10:9000"
-    }
     stages {
         stage('git checkout') {
             steps {
