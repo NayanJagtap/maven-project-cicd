@@ -11,5 +11,10 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/NayanJagtap/maven-project-cicd.git'
             }
         }
+        stage('build and test'){
+            steps{
+                sh 'cd spring-boot-app && mvn clean package'
+            }
+        }
     }
 }
