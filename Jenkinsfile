@@ -11,9 +11,22 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/NayanJagtap/maven-project-cicd.git'
             }
         }
-        stage('build and test'){
-            steps{
+        stage('build and test') {
+            steps {
                 sh 'cd spring-boot-app && mvn clean package'
+            }
+        }
+        stage('sonarqube') {
+            steps {
+                withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
+                    sh """
+                        cd spring-boot-app && \
+                        mvn sonar:sonar \
+                        -Dsonar.projectKey=project1-maven \
+                        -Dsonar.host.url=http://192.168.83.10:9000 \
+                        -Dsonar.login=${SONAR_TOKEN}
+                    """
+                }
             }
         }
     }
