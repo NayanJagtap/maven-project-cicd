@@ -5,6 +5,10 @@ pipeline {
             image 'maven:3.9.6-eclipse-temurin-17-alpine'
         }
     }
+    environment {
+        // Variable name changed to match usage below
+        DOCKER_IMAGE = "nayandinkarjagtap/project2-maven"
+    }
     stages {
         stage('git checkout') {
             steps {
@@ -20,12 +24,27 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
                     sh """
-                       cd spring-boot-app && \
-                mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-                -Dsonar.projectKey=project1-maven \
-                -Dsonar.host.url=http://192.168.83.10:9000 \
-                -Dsonar.login=${SONAR_TOKEN}
+                        cd spring-boot-app && \
+                        mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                        -Dsonar.projectKey=project1-maven \
+                        -Dsonar.host.url=http://192.168.83.10:9000 \
+                        -Dsonar.login=${SONAR_TOKEN}
                     """
+                }
+            }
+        }
+        stage('build and push docker image') {
+            steps {
+                script {
+                    // 1. Build the image (assuming Dockerfile is inside spring-boot-app)
+                    sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
+                    
+                    // 2. Push the image to Docker Hub
+                    // Leaving the URL blank '' defaults to Docker Hub (index.docker.io)
+                    docker.withRegistry('', 'nayandinkarjagtap') {
+                        def img = docker.image("${DOCKER_IMAGE}:latest")
+                        img.push()
+                    }
                 }
             }
         }
