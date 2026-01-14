@@ -37,6 +37,7 @@ pipeline {
             steps {
                 script {
                     // 1. Build the image (assuming Dockerfile is inside spring-boot-app)
+		    sh 'apk add --no-cache docker-cli'
                     sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
                     
                     // 2. Push the image to Docker Hub
