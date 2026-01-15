@@ -1,17 +1,15 @@
 pipeline {
     agent {
         docker {
-            // Using your newly built and fixed image
-            image 'nayandinkarjagtap/jenkins-maven-docker:v3'
-            // We mount the socket so the CLI can talk to the host's Docker engine
-            // --group-add 0 ensures the user has permission to use the socket
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock --group-add 0'
+            // A stable Maven image. We use eclipse-temurin for better compatibility.
+            image 'maven:3.9.6-eclipse-temurin-17'
+            // We only need to mount the socket. 
+            // Jenkins on the host will handle the connection seamlessly.
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
     environment {
         DOCKER_IMAGE = "nayandinkarjagtap/project2-maven"
-        // Force the PATH to look at /usr/local/bin first to avoid the GLIBC error
-        PATH = "/usr/local/bin:/usr/bin:/bin"
     }
     stages {
         stage('git checkout') {
@@ -26,6 +24,7 @@ pipeline {
         }
         stage('sonarqube') {
             steps {
+                // Ensure your 'sonarqube' credential ID exists in the new Jenkins UI
                 withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
                     sh """
                         cd spring-boot-app && \
@@ -40,12 +39,12 @@ pipeline {
         stage('build and push docker image') {
             steps {
                 script {
-                    // This calls 'docker' which finds your working version first
+                    // This now uses the native Docker CLI on your Ubuntu 24 VM
                     sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
                     
+                    // Ensure the 'nayandinkarjagtap' credentials are added to the new Jenkins
                     docker.withRegistry('', 'nayandinkarjagtap') {
-                        def img = docker.image("${DOCKER_IMAGE}:latest")
-                        img.push()
+                        docker.image("${DOCKER_IMAGE}:latest").push()
                     }
                 }
             }
@@ -53,7 +52,7 @@ pipeline {
     }
     post {
         always {
-            // Clean up the image from the host to save disk space
+            // Clean up images to save disk space on your master VM
             sh "docker rmi ${DOCKER_IMAGE}:latest || true"
         }
     }
