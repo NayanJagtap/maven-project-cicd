@@ -1,8 +1,8 @@
 pipeline {
     agent {
         docker {
+	    image 'abhishekf5/maven-abhishek-docker-agent:v1'
             args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
-            image 'maven:3.9.6-eclipse-temurin-17-alpine'
         }
     }
     environment {
@@ -36,11 +36,7 @@ pipeline {
         stage('build and push docker image') {
             steps {
                 script {
-                    // 1. Build the image (assuming Dockerfile is inside spring-boot-app)
-		    sh 'apk add --no-cache docker-cli'
                     sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
-                    
-                    // 2. Push the image to Docker Hub
                     // Leaving the URL blank '' defaults to Docker Hub (index.docker.io)
                     docker.withRegistry('', 'nayandinkarjagtap') {
                         def img = docker.image("${DOCKER_IMAGE}:latest")
