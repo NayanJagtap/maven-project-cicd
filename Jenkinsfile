@@ -5,7 +5,7 @@ pipeline {
 	    image 'abhishekf5/maven-abhishek-docker-agent:v1'
             // We only need to mount the socket. 
             // Jenkins on the host will handle the connection seamlessly.
-	    args '-u root -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker'
+	     args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
     environment {
