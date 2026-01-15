@@ -4,12 +4,14 @@ pipeline {
             // Using your newly built and fixed image
             image 'nayandinkarjagtap/jenkins-maven-docker:v3'
             // We mount the socket so the CLI can talk to the host's Docker engine
-            // --group-add 0 ensures the jenkins user has permission to use the socket
+            // --group-add 0 ensures the user has permission to use the socket
             args '--user root -v /var/run/docker.sock:/var/run/docker.sock --group-add 0'
         }
     }
     environment {
         DOCKER_IMAGE = "nayandinkarjagtap/project2-maven"
+        // Force the PATH to look at /usr/local/bin first to avoid the GLIBC error
+        PATH = "/usr/local/bin:/usr/bin:/bin"
     }
     stages {
         stage('git checkout') {
@@ -19,7 +21,6 @@ pipeline {
         }
         stage('build and test') {
             steps {
-                // This uses the Maven installed in your custom image
                 sh 'cd spring-boot-app && mvn clean package'
             }
         }
@@ -39,8 +40,7 @@ pipeline {
         stage('build and push docker image') {
             steps {
                 script {
-                    // This calls 'docker' which, thanks to our image fix, 
-                    // points to the working version in /usr/local/bin
+                    // This calls 'docker' which finds your working version first
                     sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
                     
                     docker.withRegistry('', 'nayandinkarjagtap') {
