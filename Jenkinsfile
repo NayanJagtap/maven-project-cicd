@@ -2,10 +2,10 @@ pipeline {
     agent {
         docker {
             // A stable Maven image. We use eclipse-temurin for better compatibility.
-	    image 'abhishekf5/maven-abhishek-docker-agent:v1'
-            // We only need to mount the socket. 
+            image 'abhishekf5/maven-abhishek-docker-agent:v1'
+            // We only need to mount the socket.
             // Jenkins on the host will handle the connection seamlessly.
-	     args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+             args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
     environment {
@@ -41,13 +41,20 @@ pipeline {
                 script {
                     // This now uses the native Docker CLI on your Ubuntu 24 VM
                     sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
-                    
+
                     // Ensure the 'nayandinkarjagtap' credentials are added to the new Jenkins
                     docker.withRegistry('', 'nayandinkarjagtap') {
                         docker.image("${DOCKER_IMAGE}:latest").push()
                     }
                 }
             }
+        stage('stop the sonarkube container'){
+            steps{
+                script{
+                    sh "docker stop sonarkube-compact || true"
+                }
+            }
+        }
         }
     }
     post {
@@ -57,3 +64,4 @@ pipeline {
         }
     }
 }
+
