@@ -2,11 +2,15 @@ pipeline {
     agent {
         docker {
             image 'abhishekf5/maven-abhishek-docker-agent:v1'
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+            // Keep mounting the binary since #23 worked with this logic
+            args '--user root -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker'
         }
     }
     environment {
         DOCKER_IMAGE = "nayandinkarjagtap/project2-maven"
+        // Define these for the Git push step
+        GIT_REPO_NAME = "maven-project-cicd"
+        GIT_USER_NAME = "NayanJagtap"
     }
     stages {
         stage('git checkout') {
@@ -14,13 +18,13 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/NayanJagtap/maven-project-cicd.git'
             }
         }
-        
+
         stage('build and test') {
             steps {
                 sh 'cd spring-boot-app && mvn clean package'
             }
         }
-        
+
         stage('sonarqube') {
             steps {
                 withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
@@ -34,17 +38,19 @@ pipeline {
                 }
             }
         }
-        
+
         stage('build and push docker image') {
             steps {
                 script {
                     sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
                     docker.withRegistry('', 'nayandinkarjagtap') {
+                        // Push latest and a versioned tag
                         docker.image("${DOCKER_IMAGE}:latest").push()
+                        docker.image("${DOCKER_IMAGE}:latest").push("${env.BUILD_NUMBER}")
                     }
                 }
             }
-        } // This was the correctly placed brace
+        }
 
         stage('stop the sonarkube container') {
             steps {
@@ -53,7 +59,28 @@ pipeline {
                 }
             }
         }
-    } // End of stages block
+
+        stage('github push back buildnumber') {
+            steps {
+                // Fixed variable names and structure here
+                withCredentials([string(credentialsId: 'github-token-maven', variable: 'GITHUB_TOKEN')]) {
+                    sh """
+                        git config user.name "${GIT_USER_NAME}"
+                        git config user.email "jagtapdinkar60@gmail.com"
+                        
+                        # Use double quotes so the BUILD_NUMBER variable is expanded
+                        sed -i "s/replaceImageTag/${env.BUILD_NUMBER}/g" manifests/deployment.yml
+                        
+                        git add manifests/deployment.yml
+                        git commit -m "Update deployment image to version ${env.BUILD_NUMBER}"
+                        
+                        # Fixed the push URL syntax
+                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
+                    """
+                }
+            }
+        }
+    } // This closes the STAGES block
 
     post {
         always {
