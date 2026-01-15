@@ -3,7 +3,7 @@ pipeline {
         docker {
             image 'abhishekf5/maven-abhishek-docker-agent:v1'
             // Keep mounting the binary since #23 worked with this logic
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker'
+	    args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
     environment {
