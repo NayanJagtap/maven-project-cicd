@@ -17,6 +17,6 @@ spec:
       containers:
       - name: spring-boot-app
         # This tag is usually replaced dynamically by Jenkins using 'sed'
-        image: nayandinkarjagtap/project2-maven:replaceImageTag
+        image: nayandinkarjagtap/project2-maven:35
         ports:
         - containerPort: 8080
