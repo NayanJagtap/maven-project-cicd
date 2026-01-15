@@ -2,14 +2,24 @@ pipeline {
     agent {
         docker {
             image 'nayandinkarjagtap/jenkins-maven-docker:v1'
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+            // Only mount the socket. 
+            // --entrypoint='' ensures we override any baked-in image defaults
+            args '--user root -v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
         }
     }
     environment {
-        // Variable name changed to match usage below
         DOCKER_IMAGE = "nayandinkarjagtap/project2-maven"
+        // Force the PATH to look at internal binaries first
+        PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     }
     stages {
+        stage('Environment Debug') {
+            steps {
+                // This confirms which docker binary is actually being called
+                sh 'which docker'
+                sh 'docker version'
+            }
+        }
         stage('git checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/NayanJagtap/maven-project-cicd.git'
@@ -36,14 +46,22 @@ pipeline {
         stage('build and push docker image') {
             steps {
                 script {
-                    sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
-                    // Leaving the URL blank '' defaults to Docker Hub (index.docker.io)
+                    // Force using the absolute path to the internal Docker binary
+                    sh "cd spring-boot-app && /usr/bin/docker build -t ${DOCKER_IMAGE}:latest ."
+                    
                     docker.withRegistry('', 'nayandinkarjagtap') {
+                        // We use the image object to push
                         def img = docker.image("${DOCKER_IMAGE}:latest")
                         img.push()
                     }
                 }
             }
+        }
+    }
+    post {
+        always {
+            // Clean up to prevent 'No space left on device' errors
+            sh "docker rmi ${DOCKER_IMAGE}:latest || true"
         }
     }
 }
