@@ -69,9 +69,9 @@ pipeline {
                         git config user.email "jagtapdinkar60@gmail.com"
                         
                         # Use double quotes so the BUILD_NUMBER variable is expanded
-                        sed -i "s/replaceImageTag/${env.BUILD_NUMBER}/g" manifests/deployment.yml
+                        sed -i "s/replaceImageTag/${env.BUILD_NUMBER}/g" manifests/deployment.yaml
                         
-                        git add manifests/deployment.yml
+                        git add manifests/deployment.yaml
                         git commit -m "Update deployment image to version ${env.BUILD_NUMBER}"
                         
                         # Fixed the push URL syntax
