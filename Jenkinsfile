@@ -1,25 +1,17 @@
 pipeline {
     agent {
         docker {
-            image 'nayandinkarjagtap/jenkins-maven-docker:v1'
-            // Only mount the socket. 
-            // --entrypoint='' ensures we override any baked-in image defaults
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
+            // Using your newly built and fixed image
+            image 'nayandinkarjagtap/jenkins-maven-docker:v3'
+            // We mount the socket so the CLI can talk to the host's Docker engine
+            // --group-add 0 ensures the jenkins user has permission to use the socket
+            args '--user root -v /var/run/docker.sock:/var/run/docker.sock --group-add 0'
         }
     }
     environment {
         DOCKER_IMAGE = "nayandinkarjagtap/project2-maven"
-        // Force the PATH to look at internal binaries first
-        PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     }
     stages {
-        stage('Environment Debug') {
-            steps {
-                // This confirms which docker binary is actually being called
-                sh 'which docker'
-                sh 'docker version'
-            }
-        }
         stage('git checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/NayanJagtap/maven-project-cicd.git'
@@ -27,6 +19,7 @@ pipeline {
         }
         stage('build and test') {
             steps {
+                // This uses the Maven installed in your custom image
                 sh 'cd spring-boot-app && mvn clean package'
             }
         }
@@ -46,11 +39,11 @@ pipeline {
         stage('build and push docker image') {
             steps {
                 script {
-                    // Force using the absolute path to the internal Docker binary
-                    sh "cd spring-boot-app && /usr/bin/docker build -t ${DOCKER_IMAGE}:latest ."
+                    // This calls 'docker' which, thanks to our image fix, 
+                    // points to the working version in /usr/local/bin
+                    sh "cd spring-boot-app && docker build -t ${DOCKER_IMAGE}:latest ."
                     
                     docker.withRegistry('', 'nayandinkarjagtap') {
-                        // We use the image object to push
                         def img = docker.image("${DOCKER_IMAGE}:latest")
                         img.push()
                     }
@@ -60,7 +53,7 @@ pipeline {
     }
     post {
         always {
-            // Clean up to prevent 'No space left on device' errors
+            // Clean up the image from the host to save disk space
             sh "docker rmi ${DOCKER_IMAGE}:latest || true"
         }
     }
