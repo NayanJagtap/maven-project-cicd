@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             // A stable Maven image. We use eclipse-temurin for better compatibility.
-            image 'maven:3.9.6-eclipse-temurin-17'
+	    image 'abhishekf5/maven-abhishek-docker-agent:v1'
             // We only need to mount the socket. 
             // Jenkins on the host will handle the connection seamlessly.
             args '-v /var/run/docker.sock:/var/run/docker.sock'
